@@ -26,6 +26,9 @@ def run_matching_cycle():
     loop = asyncio.new_event_loop()
     try:
         result = loop.run_until_complete(matching_engine.run_cycle())
+        if result.get("skipped"):
+            logger.info("Matching cycle skipped — lock held by another process")
+            return result
         logger.info(
             "Matching cycle %s completed: %d matches",
             result["cycle_id"],

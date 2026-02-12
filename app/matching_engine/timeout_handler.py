@@ -36,9 +36,10 @@ async def check_timeouts() -> list[dict]:
             if entered_at < cutoff:
                 await pool_manager.remove_from_pool(entry["id"], direction)
                 timed_out.append({
-                    "transaction_id": entry["id"],
+                    "pool_entry_id": entry["id"],
+                    "transaction_id": entry.get("transaction_id", ""),
                     "direction": direction,
-                    "amount": entry.get("amount"),
+                    "amount": entry.get("source_amount"),
                     "reason": "pool_timeout",
                     "fallback": "cips",
                 })
