@@ -15,11 +15,10 @@ POOL_LOCK_KEY = "pool:lock"
 # Matching tolerance — maximum percentage difference for partial matches
 TOLERANCE_PERCENT = settings.MATCHING_TOLERANCE_PERCENT
 
-# Priority score weights
-WEIGHT_WAIT_TIME = 0.4       # Longer wait = higher priority
-WEIGHT_AMOUNT_SIZE = 0.3     # Larger amounts = higher priority
-WEIGHT_KYC_LEVEL = 0.2       # Higher KYC tier = higher priority
-WEIGHT_HISTORY = 0.1         # More completed transactions = higher priority
+# Priority score weights (must sum to 1.0)
+WEIGHT_AGE = 0.40            # Longer wait = higher priority
+WEIGHT_AMOUNT = 0.35         # Larger amounts = higher priority
+WEIGHT_TIER = 0.25           # Higher KYC tier = higher priority
 
 # Pool timeout — transactions exceeding this are routed to CIPS
 POOL_TIMEOUT_HOURS = settings.MATCHING_POOL_TIMEOUT_HOURS

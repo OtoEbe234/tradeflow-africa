@@ -11,7 +11,7 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -134,23 +134,12 @@ async def _process_payment(
 
     # 7. Calculate priority
     now = datetime.now(timezone.utc)
-    completed_count = 0
-    kyc_level = "none"
-    if trader:
-        count_result = await db.execute(
-            select(func.count(Transaction.id)).where(
-                Transaction.trader_id == trader.id,
-                Transaction.status == TransactionStatus.COMPLETED,
-            )
-        )
-        completed_count = count_result.scalar_one()
-        kyc_level = "verified" if trader.kyc_tier >= 2 else "pending" if trader.kyc_tier == 1 else "none"
+    kyc_tier = trader.kyc_tier if trader else 0
 
     priority = calculate_priority(
-        entered_pool_at=now,
-        amount=txn.source_amount,
-        kyc_level=kyc_level,
-        completed_transactions=completed_count,
+        hours_in_pool=0.0,
+        amount_usd=float(txn.source_amount),
+        kyc_tier=kyc_tier,
     )
 
     # 8. Determine currency from direction
