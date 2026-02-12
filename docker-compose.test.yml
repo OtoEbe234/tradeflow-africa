@@ -1,0 +1,39 @@
+version: "3.9"
+
+# Isolated test environment for integration tests.
+# Uses different ports (5433/6380) to avoid conflicts with dev stack.
+#
+# Usage:
+#   docker compose -f docker-compose.test.yml up -d
+#   APP_ENV=development \
+#   DATABASE_URL=postgresql+asyncpg://tradeflow_test:tradeflow_test@localhost:5433/tradeflow_test \
+#   REDIS_URL=redis://localhost:6380 \
+#   pytest tests/integration/ -v
+#   docker compose -f docker-compose.test.yml down -v
+
+services:
+  postgres-test:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: tradeflow_test
+      POSTGRES_PASSWORD: tradeflow_test
+      POSTGRES_DB: tradeflow_test
+    ports:
+      - "5433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tradeflow_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 10
+
+  redis-test:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 10

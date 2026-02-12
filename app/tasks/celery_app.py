@@ -36,4 +36,8 @@ celery_app.conf.beat_schedule = {
         "task": "app.tasks.matching_tasks.run_matching_cycle",
         "schedule": settings.MATCHING_CYCLE_INTERVAL_SECONDS,
     },
+    "expire-stale-transactions": {
+        "task": "app.tasks.payment_tasks.expire_stale_transactions",
+        "schedule": 900,  # 15 minutes
+    },
 }

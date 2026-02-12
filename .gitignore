@@ -57,3 +57,6 @@ node_modules/
 
 # Redis dump
 dump.rdb
+
+# JWT keys
+keys/

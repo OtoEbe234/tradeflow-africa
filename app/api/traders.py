@@ -9,24 +9,31 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.models.trader import Trader
 from app.schemas.trader import TraderRead, TraderUpdate, KYCSubmit, KYCStatus
+from app.api.dependencies import get_current_trader
 
 router = APIRouter()
 
 
 @router.get("/me", response_model=TraderRead)
-async def get_profile(db: AsyncSession = Depends(get_db)):
+async def get_profile(trader: Trader = Depends(get_current_trader)):
     """Get the authenticated trader's profile."""
-    # TODO: Extract trader_id from JWT
-    # TODO: Fetch trader from database
-    raise HTTPException(status_code=501, detail="Not implemented")
+    return trader
 
 
 @router.patch("/me", response_model=TraderRead)
-async def update_profile(payload: TraderUpdate, db: AsyncSession = Depends(get_db)):
+async def update_profile(
+    payload: TraderUpdate,
+    trader: Trader = Depends(get_current_trader),
+    db: AsyncSession = Depends(get_db),
+):
     """Update trader profile fields (business name, address, etc.)."""
-    # TODO: Validate and apply partial update
-    raise HTTPException(status_code=501, detail="Not implemented")
+    update_data = payload.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(trader, field, value)
+    await db.flush()
+    return trader
 
 
 @router.post("/me/kyc", response_model=KYCStatus, status_code=status.HTTP_202_ACCEPTED)

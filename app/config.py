@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     APP_ENV: str = "development"
     DEBUG: bool = True
     SECRET_KEY: str = "change-me"
+    FERNET_KEY: str = "ZGV2LWtleS1jaGFuZ2UtaW4tcHJvZHVjdGlvbi1wbHM="  # run Fernet.generate_key() for production
 
     # Database
     DATABASE_URL: str = "postgresql+asyncpg://tradeflow:tradeflow_dev@localhost:5432/tradeflow"
@@ -42,7 +43,10 @@ class Settings(BaseSettings):
     WHATSAPP_VERIFY_TOKEN: str = ""
     WHATSAPP_BUSINESS_ACCOUNT_ID: str = ""
 
-    # KYC
+    # KYC / VerifyMe
+    VERIFYME_BASE_URL: str = "https://vapi.verifyme.ng/v1"
+    VERIFYME_API_KEY: str = ""
+    VERIFYME_MOCK: bool = True  # set False in production to call real API
     BVN_API_URL: str = ""
     BVN_API_KEY: str = ""
     NIN_API_URL: str = ""
@@ -53,6 +57,8 @@ class Settings(BaseSettings):
     PROVIDUS_CLIENT_ID: str = ""
     PROVIDUS_CLIENT_SECRET: str = ""
     PROVIDUS_ACCOUNT_NUMBER: str = ""
+    PROVIDUS_WEBHOOK_SECRET: str = ""   # HMAC-SHA512 key for webhook signatures
+    PAYMENT_EXPIRY_HOURS: int = 2       # Hours before INITIATED transactions expire
 
     # CIPS
     CIPS_API_URL: str = ""
@@ -62,7 +68,9 @@ class Settings(BaseSettings):
     # FX Rates
     FX_RATE_PROVIDER: str = "exchangerate-api"
     FX_RATE_API_KEY: str = ""
-    FX_RATE_CACHE_TTL_SECONDS: int = 300
+    FX_RATE_MOCK: bool = True  # set False in production to call real API
+    FX_RATE_CACHE_TTL_SECONDS: int = 60
+    FX_QUOTE_TTL_SECONDS: int = 60
 
     # Matching Engine
     MATCHING_CYCLE_INTERVAL_SECONDS: int = 300

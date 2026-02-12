@@ -2,8 +2,12 @@
 Payment service — Providus Bank integration for NGN collections and payouts.
 
 Handles virtual account generation for collections, transfer initiation
-for payouts, and webhook processing for payment confirmations.
+for payouts, webhook signature verification, and mock payload generation.
 """
+
+import hashlib
+import hmac
+from datetime import datetime, timezone
 
 import httpx
 
@@ -18,19 +22,91 @@ class PaymentService:
         self.client_id = settings.PROVIDUS_CLIENT_ID
         self.client_secret = settings.PROVIDUS_CLIENT_SECRET
 
-    async def create_virtual_account(self, trader_id: str, account_name: str) -> dict:
+    async def generate_virtual_account(
+        self,
+        transaction_id: str,
+        reference: str,
+        account_name: str,
+        amount: float,
+    ) -> dict:
         """
-        Generate a dedicated virtual account for a trader's collection.
+        Generate a dedicated virtual account for a transaction's collection.
 
-        The virtual account receives NGN payments that fund transactions.
+        Returns TF{reference[4:]} format account number (matches deposit
+        instructions in transactions.py:260). When PROVIDUS_BASE_URL is
+        empty (dev/test), returns a mock response. Otherwise calls real API.
         """
-        # TODO: Call Providus dynamic account creation API
-        # TODO: Store mapping of virtual account to trader
+        account_number = f"TF{reference[4:]}"
+
+        if not self.base_url:
+            return {
+                "account_number": account_number,
+                "account_name": account_name,
+                "bank_name": "Providus Bank",
+                "status": "active",
+            }
+
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                f"{self.base_url}/virtual-accounts",
+                json={
+                    "account_name": account_name,
+                    "amount": amount,
+                    "transaction_id": transaction_id,
+                    "reference": reference,
+                },
+                headers={
+                    "Client-Id": self.client_id,
+                    "Client-Secret": self.client_secret,
+                },
+            )
+            resp.raise_for_status()
+            return resp.json()
+
+    def verify_webhook_signature(self, payload_body: bytes, signature: str) -> bool:
+        """
+        Verify Providus webhook HMAC-SHA512 signature.
+
+        When PROVIDUS_WEBHOOK_SECRET is empty (dev), returns True to
+        allow unsigned requests during development.
+        """
+        secret = settings.PROVIDUS_WEBHOOK_SECRET
+        if not secret:
+            return True
+
+        expected = hmac.new(
+            secret.encode(),
+            payload_body,
+            hashlib.sha512,
+        ).hexdigest()
+
+        return hmac.compare_digest(expected, signature)
+
+    def simulate_webhook_payload(
+        self,
+        account_number: str,
+        amount: float,
+        reference: str,
+    ) -> dict:
+        """
+        Build a Providus-format webhook dict for the dev simulate endpoint.
+        """
         return {
-            "account_number": "",
-            "account_name": account_name,
-            "bank_name": "Providus Bank",
-            "status": "not_implemented",
+            "sessionId": f"SIM-{reference}-{int(datetime.now(timezone.utc).timestamp())}",
+            "accountNumber": account_number,
+            "tranRemarks": f"Payment for {reference}",
+            "transactionAmount": str(amount),
+            "settledAmount": str(amount),
+            "feeAmount": "0.00",
+            "vatAmount": "0.00",
+            "currency": "NGN",
+            "initiationTranRef": reference,
+            "settlementId": f"SET-{reference}",
+            "sourceAccountNumber": "0012345678",
+            "sourceAccountName": "Test Payer",
+            "sourceBankName": "Test Bank",
+            "channelId": "1",
+            "tranDateTime": datetime.now(timezone.utc).isoformat(),
         }
 
     async def initiate_transfer(

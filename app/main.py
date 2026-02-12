@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.api import auth, traders, transactions, rates, matching, admin
+from app.api import auth, traders, transactions, rates, matching, admin, webhooks, dev
 from app.whatsapp.webhook import router as whatsapp_router
 
 
@@ -51,6 +51,8 @@ app.include_router(transactions.router, prefix="/api/v1/transactions", tags=["Tr
 app.include_router(rates.router, prefix="/api/v1/rates", tags=["Rates"])
 app.include_router(matching.router, prefix="/api/v1/matching", tags=["Matching"])
 app.include_router(admin.router, prefix="/api/v1/admin", tags=["Admin"])
+app.include_router(webhooks.router, prefix="/api/v1/webhooks", tags=["Webhooks"])
+app.include_router(dev.router, prefix="/api/v1/dev", tags=["Development"])
 app.include_router(whatsapp_router, prefix="/api/v1/whatsapp", tags=["WhatsApp"])
 
 

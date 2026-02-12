@@ -3,56 +3,55 @@
 # =============================================================================
 
 # Web framework
-fastapi==0.115.6
-uvicorn[standard]==0.34.0
-python-multipart==0.0.20
+fastapi>=0.115.6
+uvicorn[standard]>=0.34.0
+python-multipart>=0.0.20
 
 # Database
-sqlalchemy[asyncio]==2.0.36
-asyncpg==0.30.0
-alembic==1.14.1
+sqlalchemy[asyncio]>=2.0.36
+asyncpg>=0.30.0
+alembic>=1.14.1
 
 # Redis
-redis[hiredis]==5.2.1
+redis[hiredis]>=5.2.1
 
 # Task queue
-celery[redis]==5.4.0
+celery[redis]>=5.4.0
 
 # Auth
-pyjwt[crypto]==2.10.1
-passlib[bcrypt]==1.7.4
-cryptography==44.0.0
+pyjwt[crypto]>=2.10.1
+passlib[bcrypt]>=1.7.4
+cryptography>=44.0.0
 
 # Validation & serialization
-pydantic==2.10.4
-pydantic-settings==2.7.1
-email-validator==2.2.0
+pydantic>=2.10.4
+pydantic-settings>=2.7.1
+email-validator>=2.2.0
 
 # HTTP client
-httpx==0.28.1
+httpx>=0.28.1
 
 # WhatsApp / webhooks
-requests==2.32.3
+requests>=2.32.3
 
 # Date/time
-python-dateutil==2.9.0.post0
+python-dateutil>=2.9.0.post0
 
 # Environment
-python-dotenv==1.0.1
+python-dotenv>=1.0.1
 
 # Testing
-pytest==8.3.4
-pytest-asyncio==0.25.0
-pytest-cov==6.0.0
-httpx==0.28.1
-faker==33.3.1
+pytest>=8.3.4
+pytest-asyncio>=0.25.0
+pytest-cov>=6.0.0
+faker>=33.3.1
 
 # Linting & formatting
-ruff==0.8.6
+ruff>=0.8.6
 
 # Monitoring (optional)
-sentry-sdk[fastapi]==2.19.2
+sentry-sdk[fastapi]>=2.19.2
 
 # Utilities
-tenacity==9.0.0
-phonenumbers==8.13.52
+tenacity>=9.0.0
+phonenumbers>=8.13.52
