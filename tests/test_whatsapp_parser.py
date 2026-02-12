@@ -50,3 +50,43 @@ class TestAmountParser:
 
     def test_negative(self):
         assert parse_amount("-5000") is None
+
+
+class TestWordFormParser:
+    """Tests for English word-form number parsing."""
+
+    def test_fifty_million(self):
+        assert parse_amount("fifty million") == Decimal("50000000")
+
+    def test_two_hundred_thousand(self):
+        assert parse_amount("two hundred thousand") == Decimal("200000")
+
+    def test_five_billion(self):
+        assert parse_amount("five billion") == Decimal("5000000000")
+
+    def test_one_million(self):
+        assert parse_amount("one million") == Decimal("1000000")
+
+    def test_ten_thousand(self):
+        assert parse_amount("ten thousand") == Decimal("10000")
+
+    def test_one_hundred_fifty_million(self):
+        assert parse_amount("one hundred fifty million") == Decimal("150000000")
+
+    def test_twenty_five_thousand(self):
+        assert parse_amount("twenty five thousand") == Decimal("25000")
+
+    def test_million_alone(self):
+        """Single scale word: 'million' -> 1,000,000."""
+        assert parse_amount("million") == Decimal("1000000")
+
+    def test_case_insensitive(self):
+        assert parse_amount("Fifty Million") == Decimal("50000000")
+
+    def test_word_form_invalid(self):
+        """Random text should not match word-form parser."""
+        assert parse_amount("please send money") is None
+
+    def test_word_form_zero_word(self):
+        """'zero' should return None (amount must be > 0)."""
+        assert parse_amount("zero") is None

@@ -42,6 +42,7 @@ class Settings(BaseSettings):
     WHATSAPP_ACCESS_TOKEN: str = ""
     WHATSAPP_VERIFY_TOKEN: str = ""
     WHATSAPP_BUSINESS_ACCOUNT_ID: str = ""
+    WHATSAPP_APP_SECRET: str = ""  # Used for webhook signature validation
 
     # KYC / VerifyMe
     VERIFYME_BASE_URL: str = "https://vapi.verifyme.ng/v1"
