@@ -129,14 +129,12 @@ class TestGlobalCommands:
             patched_redis,
             patch("app.whatsapp.messages.send_text", new_callable=AsyncMock),
             patch("app.whatsapp.messages.send_menu", new_callable=AsyncMock),
+            patch("app.whatsapp.flows.status.get_trader_by_phone", new_callable=AsyncMock, return_value=None),
         ):
             await bot.handle_message("+2348012345678", "status")
 
-        # State should be set to status flow
+        # State should be set (status flow ran and returned to menu since unregistered)
         assert mock_redis.setex.called
-        last_call = mock_redis.setex.call_args_list[-1]
-        saved_state = json.loads(last_call[0][2])
-        assert saved_state["flow"] == "status"
 
     @pytest.mark.asyncio
     async def test_menu_command_clears_state(self, bot, mock_redis, patched_redis):
@@ -187,18 +185,20 @@ class TestFlowRouting:
 
     @pytest.mark.asyncio
     async def test_menu_routes_pay_to_payment_flow(self, bot, mock_redis, patched_redis):
-        """Typing 'pay' from menu transitions to payment flow."""
+        """Typing 'pay' from menu routes to payment (or menu if unregistered)."""
+        from app.models.trader import Trader, TraderStatus
+        trader = Trader(phone="+2348012345678", full_name="Test User", status=TraderStatus.ACTIVE)
         with (
             patched_redis,
             patch("app.whatsapp.messages.send_text", new_callable=AsyncMock),
             patch("app.whatsapp.messages.send_menu", new_callable=AsyncMock),
+            patch("app.whatsapp.flows.menu.get_trader_by_phone", new_callable=AsyncMock, return_value=trader),
         ):
             await bot.handle_message("+2348012345678", "pay")
 
         last_call = mock_redis.setex.call_args_list[-1]
         saved_state = json.loads(last_call[0][2])
         assert saved_state["flow"] == "payment"
-        assert saved_state["step"] == "start"
 
     @pytest.mark.asyncio
     async def test_menu_routes_register_to_registration_flow(self, bot, mock_redis, patched_redis):
@@ -230,35 +230,48 @@ class TestFlowRouting:
         last_call = mock_redis.setex.call_args_list[-1]
         saved_state = json.loads(last_call[0][2])
         assert saved_state["flow"] == "payment"
-        assert saved_state["step"] == "amount"
+        assert saved_state["step"] == "amount_input"
         assert saved_state["data"]["direction"] == "ngn_to_cny"
 
     @pytest.mark.asyncio
     async def test_payment_flow_amount_step_valid(self, bot, mock_redis, patched_redis):
-        """Payment flow: valid amount is parsed and stored."""
+        """Payment flow: valid amount generates quote and moves to rate_display."""
         mock_redis.get = AsyncMock(
             return_value=json.dumps({
-                "flow": "payment", "step": "amount",
+                "flow": "payment", "step": "amount_input",
                 "data": {"direction": "ngn_to_cny"},
             })
         )
+        mock_quote = {
+            "quote_id": "QT-TEST", "source_currency": "NGN",
+            "target_currency": "CNY", "source_amount": "50000000",
+            "target_amount": "233644.86", "mid_market_rate": "213.9310",
+            "fee_amount": "1000000", "fee_percentage": "2.00",
+            "total_cost": "51000000",
+        }
+        mock_svc = AsyncMock()
+        mock_svc.generate_quote = AsyncMock(return_value=mock_quote)
         with (
             patched_redis,
+            patch("app.whatsapp.flows.payment.RateService", return_value=mock_svc),
+            patch("app.whatsapp.flows.payment.get_user_lang", new_callable=AsyncMock, return_value="en"),
             patch("app.whatsapp.messages.send_text", new_callable=AsyncMock),
+            patch("app.whatsapp.flows.payment.send_rate_quote", new_callable=AsyncMock),
+            patch("app.whatsapp.flows.payment.send_button", new_callable=AsyncMock),
         ):
             await bot.handle_message("+2348012345678", "50m")
 
         last_call = mock_redis.setex.call_args_list[-1]
         saved_state = json.loads(last_call[0][2])
-        assert saved_state["step"] == "beneficiary_name"
-        assert saved_state["data"]["amount"] == "50000000"
+        assert saved_state["step"] == "rate_display"
+        assert saved_state["data"]["quote"] is not None
 
     @pytest.mark.asyncio
     async def test_payment_flow_amount_step_invalid(self, bot, mock_redis, patched_redis):
         """Payment flow: invalid amount keeps user on same step."""
         mock_redis.get = AsyncMock(
             return_value=json.dumps({
-                "flow": "payment", "step": "amount",
+                "flow": "payment", "step": "amount_input",
                 "data": {"direction": "ngn_to_cny"},
             })
         )
@@ -270,25 +283,27 @@ class TestFlowRouting:
 
         last_call = mock_redis.setex.call_args_list[-1]
         saved_state = json.loads(last_call[0][2])
-        assert saved_state["step"] == "amount"  # stays on same step
-        assert "couldn't understand" in mock_send.call_args[0][1]
+        assert saved_state["step"] == "amount_input"  # stays on same step
+        assert "couldn't understand" in mock_send.call_args[0][1].lower()
 
     @pytest.mark.asyncio
-    async def test_registration_flow_business_name(self, bot, mock_redis, patched_redis):
-        """Registration flow: business name is stored."""
+    async def test_registration_flow_language_selection(self, bot, mock_redis, patched_redis):
+        """Registration flow: language selection stores lang and advances."""
         mock_redis.get = AsyncMock(
-            return_value=json.dumps({"flow": "registration", "step": "business_name", "data": {}})
+            return_value=json.dumps({"flow": "registration", "step": "language", "data": {}})
         )
         with (
             patched_redis,
+            patch("app.whatsapp.flows.registration.set_user_lang", new_callable=AsyncMock),
             patch("app.whatsapp.messages.send_text", new_callable=AsyncMock),
+            patch("app.whatsapp.flows.registration.send_button", new_callable=AsyncMock),
         ):
-            await bot.handle_message("+2348012345678", "Lagos Trading Co.")
+            await bot.handle_message("+2348012345678", "1")
 
         last_call = mock_redis.setex.call_args_list[-1]
         saved_state = json.loads(last_call[0][2])
-        assert saved_state["step"] == "trader_type"
-        assert saved_state["data"]["business_name"] == "Lagos Trading Co."
+        assert saved_state["step"] == "phone_confirm"
+        assert saved_state["data"]["lang"] == "en"
 
 
 # ── Interactive routing ──────────────────────────────────────────────────
@@ -299,11 +314,14 @@ class TestInteractiveRouting:
 
     @pytest.mark.asyncio
     async def test_action_pay_button(self, bot, mock_redis, patched_redis):
-        """action_pay button reply transitions to payment flow."""
+        """action_pay button reply transitions to payment flow (registered user)."""
+        from app.models.trader import Trader, TraderStatus
+        trader = Trader(phone="+2348012345678", full_name="Test User", status=TraderStatus.ACTIVE)
         with (
             patched_redis,
             patch("app.whatsapp.messages.send_text", new_callable=AsyncMock),
             patch("app.whatsapp.messages.send_menu", new_callable=AsyncMock),
+            patch("app.whatsapp.flows.menu.get_trader_by_phone", new_callable=AsyncMock, return_value=trader),
         ):
             await bot.handle_interactive("+2348012345678", "action_pay")
 

@@ -25,6 +25,17 @@ HEADERS = {
 # ── Low-level senders ────────────────────────────────────────────────────
 
 
+async def mark_as_read(message_id: str):
+    """Mark an incoming message as read (blue ticks)."""
+    payload = {
+        "messaging_product": "whatsapp",
+        "status": "read",
+        "message_id": message_id,
+    }
+    async with httpx.AsyncClient() as client:
+        await client.post(API_URL, json=payload, headers=HEADERS)
+
+
 async def send_text(to: str, body: str):
     """Send a plain text message to a WhatsApp number."""
     payload = {
@@ -56,6 +67,7 @@ async def send_menu(to: str):
                             {"id": "action_pay", "title": "Make a Payment", "description": "Send money across the Nigeria-China corridor"},
                             {"id": "action_status", "title": "Check Status", "description": "Check your transaction status"},
                             {"id": "action_register", "title": "Register", "description": "Create a new TradeFlow account"},
+                            {"id": "action_rate", "title": "Check Rate", "description": "View current NGN/CNY exchange rates"},
                         ],
                     }
                 ],

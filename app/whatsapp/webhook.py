@@ -93,6 +93,12 @@ async def receive_message(request: Request):
         sender = message["from"]
         message_type = message["type"]
 
+        # Mark incoming message as read (blue ticks) before processing
+        message_id = message.get("id")
+        if message_id:
+            from app.whatsapp.messages import mark_as_read
+            await mark_as_read(message_id)
+
         if message_type == "text":
             text = message["text"]["body"]
             await bot.handle_message(sender=sender, text=text)
